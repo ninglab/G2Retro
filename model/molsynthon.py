@@ -226,7 +226,6 @@ class MolSynthon(nn.Module):
         """
         react_graphs, cpu_react_tensors, react_orders = react_batch
         react_tensors = make_cuda(cpu_react_tensors)
-        if torch.max(react_tensors[4]) > 10000: pdb.set_trace()
         
         product_graphs, product_tensors, _, _ = product_batch
         

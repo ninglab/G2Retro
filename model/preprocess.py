@@ -136,7 +136,7 @@ if __name__ == "__main__":
     new_mol_trees = []
     for mol_tree, data in zip(mol_trees, all_data_list):
         if mol_tree[0] is None:
-            print("%s,multi reactant" % (data['rxn_smiles']))
+            print("%s,cannot be processed" % (data['rxn_smiles']))
         else:
             new_mol_trees.append( (mol_tree[:3], data) )
     
