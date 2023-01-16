@@ -17,7 +17,6 @@ from datautils import PairTreeFolder, MolTreeFolder
 from torch.nn import DataParallel
 from chemutils import is_sim
 import random
-import pdb
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 path = os.path.dirname(os.path.realpath(__file__))
@@ -29,15 +28,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--train', type=str, default="../data/dfs_tensors_with_class.pkl", help='data path to training data')
     parser.add_argument('--vocab', type=str, default="../data/vocab.txt", help='data path to substructure vocabulary')
-    parser.add_argument('--valid', type=str, default="../data/valid.csv", help='data path to substructure vocabulary')
+    parser.add_argument('--valid', type=str, default="../data/valid.csv", help='data path to validation dataset')
     parser.add_argument('--save_dir', type=str, default=path+"/result/", help='data path to the directory used to save trained models')
-    parser.add_argument('--load_epoch', type=int, default=0, help='an interger used to control the loaded model (i.e., if load_epoch==1000, '+\
-                        'the model save_dir+1000.pkl would be loaded)')
+    parser.add_argument('--load_epoch', type=int, default=0, help='an interger used to control the loaded model (i.e., if load_epoch==20, '+\
+                        'the model save_dir+20.pkl would be loaded)')
     parser.add_argument('--ncpu', type=int, default=10, help='the number of cpus')
     
     # size of model
     parser.add_argument('--size', type=int, default=70000, help='size of training data')
-    parser.add_argument('--hidden_size', type=int, default=32, help='the dimension of hidden layers')
+    parser.add_argument('--hidden_size', type=int, default=256, help='the dimension of hidden layers')
     parser.add_argument('--batch_size', type=int, default=256, help='the number of molecule pairs in each batch')
     parser.add_argument('--latent_size', type=int, default=32, help='the dimention of latent embeddings')
     parser.add_argument('--embed_size', type=int, default=32, help='the dimention of substructure embedding')

@@ -1,4 +1,3 @@
-import pdb
 import random
 import time
 import copy
@@ -241,10 +240,9 @@ class MolCenter(nn.Module):
         """ get the logits for center prediction
         """
         select_product_embed_vecs = index_select_ND(product_embed_vecs, 0, cand_center_idxs)
-        try:
-            center_hiddens = torch.cat( (cand_center_embeds, select_product_embed_vecs), dim=1)
-        except:
-            pdb.set_trace()
+        
+        center_hiddens = torch.cat( (cand_center_embeds, select_product_embed_vecs), dim=1)
+        
         if is_bond:
             center_logits = self.W_tb( center_hiddens )
             target.index_put_([torch.LongTensor([0, 1, 2, 3]).repeat(len(cand_center_idxs)).to(device), torch.repeat_interleave(cand_center_idxs, 4)], center_logits.flatten())
@@ -455,10 +453,8 @@ class MolCenter(nn.Module):
                 labels.append( 4 * cand_bond_size + bond_order[0][0] - atoms_offset)
                 atom_center_idxs.append(i)
             else:
-                try:
-                    bond_idx = torch.where(one_dir_bond_tensor == bond_order[0][0]-bonds_offset)[0].item()
-                except:
-                    pdb.set_trace()
+                bond_idx = torch.where(one_dir_bond_tensor == bond_order[0][0]-bonds_offset)[0].item()
+                
                 labels.append( 4 * bond_idx + bond_order[0][1] )
                 bond_center_idxs.append(i)
             
@@ -496,10 +492,7 @@ class MolCenter(nn.Module):
         start = 0
         for i, (num_bond, num_atom, length) in enumerate(lengths):
             pad_logits[i, :num_bond*4] = cand_logits[:, start:start + num_bond].transpose(0, 1).flatten()
-            try:
-                pad_logits[i, num_bond*4:length] = cand_logits[0, start+num_bond:start+num_bond+num_atom]
-            except:
-                pdb.set_trace()
+            pad_logits[i, num_bond*4:length] = cand_logits[0, start+num_bond:start+num_bond+num_atom]
             start += (num_bond + num_atom)
         
         lengths = torch.LongTensor([length[2] for length in lengths]).to(device)
@@ -582,10 +575,8 @@ class MolCenter(nn.Module):
         start = 0
         for i, (num_bond, num_atom, length, _, _) in enumerate(lengths):
             pad_logits[i, :num_bond*4] = cand_logits[:, start:start + num_bond].transpose(0, 1).flatten()
-            try:
-                pad_logits[i, num_bond*4:length] = cand_logits[0, start+num_bond:start+num_bond+num_atom]
-            except:
-                pdb.set_trace()
+            pad_logits[i, num_bond*4:length] = cand_logits[0, start+num_bond:start+num_bond+num_atom]
+            
             start += (num_bond + num_atom)
         
         cand_lengths = torch.LongTensor([length[2] for length in lengths]).to(device)
@@ -611,10 +602,7 @@ class MolCenter(nn.Module):
         
         pad_atom_vecs = torch.zeros_like(react_atom_vecs).to(device)
         for i in range(react_atom_vecs.shape[0]):
-            try:
-                mapnum = react_dict[i]
-            except:
-                pdb.set_trace()
+            mapnum = react_dict[i]
             if mapnum == 0: continue
             idx = synthon_dict[mapnum]
             
@@ -649,10 +637,7 @@ class MolCenter(nn.Module):
         # bond change prediction
         bond_charge_hiddens, bond_charge_labels = bond_charge_data
         bond_charge_logits = self.W_bc( bond_charge_hiddens )
-        try:
-            bond_loss = self.bond_charge_loss( bond_charge_logits, bond_charge_labels )
-        except:
-            pdb.set_trace()
+        bond_loss = self.bond_charge_loss( bond_charge_logits, bond_charge_labels )
         bond_charge_pred = torch.argmax(bond_charge_logits, dim=1)
         bond_acc = torch.sum(bond_charge_pred == bond_charge_labels).float() / bond_charge_labels.size(0)
         bond_minor_idxs = torch.where(bond_charge_labels != 0)[0]
@@ -691,20 +676,18 @@ class MolCenter(nn.Module):
         atom1, atom2 = atom_idxs
         
         cand_change_bond_idxs, cand_change_atom_idxs = [], []
-        try:
-            for bond in list(product_graph.edges(atom1)) + list(product_graph.edges(atom2)):
-                if bond[0] == atom1 and bond[1] == atom2: continue
-                if bond[0] == atom2 and bond[1] == atom1: continue
-                
-                catom1, catom2 = bond
-                if product_graph[catom1][catom2]['dir'] != 0:
-                    catom1, catom2 = catom2, catom1
-                
-                cand_change_bond_idx = cand_bond_idx_dict[product_graph[catom1][catom2]['mess_idx']]
-                cand_change_bond_idxs.append(cand_change_bond_idx)
-                cand_change_atom_idxs.append([catom1, catom2])
-        except:
-            pdb.set_trace()
+        
+        for bond in list(product_graph.edges(atom1)) + list(product_graph.edges(atom2)):
+            if bond[0] == atom1 and bond[1] == atom2: continue
+            if bond[0] == atom2 and bond[1] == atom1: continue
+            
+            catom1, catom2 = bond
+            if product_graph[catom1][catom2]['dir'] != 0:
+                catom1, catom2 = catom2, catom1
+            
+            cand_change_bond_idx = cand_bond_idx_dict[product_graph[catom1][catom2]['mess_idx']]
+            cand_change_bond_idxs.append(cand_change_bond_idx)
+            cand_change_atom_idxs.append([catom1, catom2])
         
         cuda_cand_change_bond_idxs = torch.LongTensor( cand_change_bond_idxs ).to(device)
         cand_change_bond_embeds = index_select_ND( cand_bond_embeds, 0, cuda_cand_change_bond_idxs )
@@ -765,10 +748,7 @@ class MolCenter(nn.Module):
                     atom_idx = [cand_atom_atom_idxs[center_idx].item() - length_scope[j][4] - 1]
                 
                 if len(atom_idx) == 2:
-                    try:
-                        tmp = tree.mol_graph[atom_idx[0]][atom_idx[1]]
-                    except:
-                        pdb.set_trace()
+                    tmp = tree.mol_graph[atom_idx[0]][atom_idx[1]]
                 
                 # is atom
                 if len(atom_idx) == 1:
@@ -907,10 +887,7 @@ class MolCenter(nn.Module):
                     idx = atom_atom_charge_batch_idxs.index(j)
                     charge_ranks = atom_atom_charge_ranks[idx]
                     
-                    try:
-                        aidx = atom_atom_charge_data[idx][0] - length_scope[j][4] - 1
-                    except:
-                        pdb.set_trace()
+                    aidx = atom_atom_charge_data[idx][0] - length_scope[j][4] - 1
                     
                     changed_atom_idxs = []
                     for m, charge in enumerate(charge_ranks[:2]):
@@ -997,14 +974,13 @@ class MolCenter(nn.Module):
                 react_tree.stack = []
                 
                 mapnum_to_idx = get_idx_from_mapnum(react_tree.mol)
-                try:
-                    for idx in top_k_centers[j][i]:
-                        mapnum = prod_idx_to_mapnum[idx]
-                        if mapnum in mapnum_to_idx:
-                            atom_id = mapnum_to_idx[mapnum]
-                            react_tree.stack.append(atom_id)
-                except:
-                    pdb.set_trace()
+                
+                for idx in top_k_centers[j][i]:
+                    mapnum = prod_idx_to_mapnum[idx]
+                    if mapnum in mapnum_to_idx:
+                        atom_id = mapnum_to_idx[mapnum]
+                        react_tree.stack.append(atom_id)
+                
                 reacts_trees[j] = react_tree
             
             top_k_synthon_trees[i] = reacts_trees

@@ -21,7 +21,7 @@ path = os.path.dirname(os.path.realpath(__file__))
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--train', type=str, default="../data/dfs_tensors_with_class.pkl", help='data path to training data')
-    parser.add_argument('--valid', type=str, default="../data/valid.csv", help='data path to training data')
+    parser.add_argument('--valid', type=str, default="../data/valid.csv", help='data path to validation data')
     
     parser.add_argument('--vocab', type=str, default="../data/vocab.txt", help='data path to substructure vocabulary')
     parser.add_argument('--save_dir', type=str, default="../result/", help='data path to the directory used to save trained models')
@@ -36,12 +36,12 @@ if __name__ == "__main__":
     parser.add_argument('--embed_size', type=int, default=32, help='the dimention of substructure embedding')
     parser.add_argument('--depthG', type=int, default=5, help='the depth of message passing in graph encoder')
     parser.add_argument('--depthT', type=int, default=3, help='the depth of message passing in tree encoder')
-
-    parser.add_argument('--use_atomic', action="store_false")
-    parser.add_argument('--use_node_embed', action="store_true")
-    parser.add_argument('--use_brics', action="store_true")    
-    parser.add_argument('--use_feature', action='store_false')
-    parser.add_argument('--use_class', action='store_true')
+    
+    parser.add_argument('--use_atomic', action="store_false", help='whether to use atomic number as feature (default value is True)')
+    parser.add_argument('--use_node_embed', action="store_true", help='whether to use the substructure embedding in the prediction functions (default value is False)')
+    parser.add_argument('--use_brics', action="store_true", help='whether to use brics substructures in the encoder (default value is False)')    
+    parser.add_argument('--use_feature', action='store_false', help='whether to )
+    parser.add_argument('--use_class', action='store_true', help='whether the reaction types are known')
     parser.add_argument('--update_embed', action='store_true')
     parser.add_argument('--shuffle', action='store_false')
     parser.add_argument('--use_product', action='store_false')
@@ -53,8 +53,6 @@ if __name__ == "__main__":
     parser.add_argument('--use_atom_product', action='store_true')
     
     parser.add_argument('--network_type', type=str, default='gcn')
-    parser.add_argument('--add_ds', action='store_true', help='a boolean used to control whether adding the embedding of disconnection site '+\
-                        'into the latent embedding or not.')
     parser.add_argument('--clip_norm', type=float, default=10.0, help='')
     parser.add_argument('--use_tree', action='store_true')
     
@@ -176,7 +174,7 @@ if __name__ == "__main__":
             nums *= 0
             acc_rec *= 0
 
-        # update learning rate
+        # test the trained model on validation set
         if ie != last_ie:
             top_10_acc = []
             for valid_batch in valid_batches:
@@ -191,7 +189,8 @@ if __name__ == "__main__":
             print("[valid/%d] top1: %.4f, top3: %.4f, top5: %.4f" % (ie+load_epoch, top_1_acc, top_3_acc, top_5_acc))
             last_ie += 1
             
-            if top_1_acc - optim_val_acc >= 0.002 and ie + load_epoch >= 20:
+            # save the optimal model with the highest validation accuracy
+            if top_1_acc - optim_val_acc >= 0.001 and ie + load_epoch >= 20:
                 optim_val_acc = top_1_acc
                 optim_epoch = ie + load_epoch
                 print("save optimal model at epoch %d" % (ie + load_epoch))
