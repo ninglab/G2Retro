@@ -56,7 +56,6 @@ parser.add_argument('--depthGS', type=int, default=8)
 parser.add_argument('--depthGC', type=int, default=5)
 parser.add_argument('--depthT', type=int, default=3)
 
-
 parser.add_argument('--reduce_dim', action="store_true")
 parser.add_argument('--use_atomic', action="store_false")
 parser.add_argument('--sum_pool', action="store_false")
@@ -73,17 +72,17 @@ parser.add_argument('--use_feature', action="store_false")
 parser.add_argument('--use_match', action="store_true")
 parser.add_argument('--use_mess', action="store_true")
 parser.add_argument('--use_tree', action="store_true")
-parser.add_argument('--lr', type=float, default=2)
-parser.add_argument('--num', type=int, default=20)
-parser.add_argument('--clip_norm', type=float, default=50.0)
+parser.add_argument('--without_target', action="store_true", help='whether the input data includes ground truth reactants')
 
-parser.add_argument('--epoch', type=int, default=50)
+parser.add_argument('--num', type=int, default=20)
+
 args = parser.parse_args()
 
 vocab = [x.strip("\r\n ") for x in open(args.vocab)] 
 vocab = Vocab(vocab)
 avocab = common_atom_vocab
 
+# ======== load center identification model =========
 args.depthG = args.depthGC
 args.hidden_size = args.hidden_sizeC
 args.latent_size = args.latent_sizeC
@@ -95,6 +94,7 @@ try:
 except:
     raise ValueError("model does not exist")
 
+# ======== load synthon completion model ===========
 args.depthG = args.depthGS
 args.hidden_size = args.hidden_sizeS
 args.latent_size = args.latent_sizeS
@@ -112,25 +112,31 @@ except:
     raise ValueError("model does not exist")
 args.use_brics = tmp1
 args.use_tree = tmp2
+args.with_target = not args.without_target
 
+# ============== load test dataset ==================
 data = []
 with open(args.test_path) as f:
     for line in f.readlines()[1:]:
         s = line.strip("\r\n ").split(",")
-        smiles = s[2].split(">>")
-        data.append((int(s[0]), s[1], smiles[1], smiles[0]))
+        if args.with_target:
+            smiles = s[2].split(">>")
+            data.append((int(s[0]), s[1], smiles[1], smiles[0]))
+        else:
+            data.append((0, -1, s[0], ''))
 
 output = []
 start = int(args.start)
 end = int(args.size) + start if args.size > 0 else len(data)
 
+# ============= prepare output files =======================
 output_path = args.save_dir + args.output + "_" + str(args.knum) + "_%d" %(start) + "_%d" % (end)
 
-res_file = open("%s_res.txt" % (output_path), 'w')
-error_file = open("%s_error.txt" % (output_path), 'w')
-pred_file = open("%s_pred.txt" % (output_path), 'w')
+res_file = open("%s_res.txt" % (output_path), 'w') # result file with top-10 exact match labels
+error_file = open("%s_error.txt" % (output_path), 'w') # error file with logs
+pred_file = open("%s_pred.txt" % (output_path), 'w') # prediction file with all the predicted reactants
 
-loader = MolTreeFolder(data[start:end], vocab, avocab, args.batch_size, test=True, use_atomic=True, use_class=args.use_class, use_brics=args.use_brics, use_feature=True, del_center=True, usepair=False)
+loader = MolTreeFolder(data[start:end], vocab, avocab, args.ncpu, args.batch_size, with_target=args.with_target, test=True, use_atomic=True, use_class=args.use_class, use_brics=args.use_brics, use_feature=True, del_center=True, usepair=False)
 
 top_10_bool = np.zeros((len(loader.prod_list), 10))
 prod_list = []
@@ -151,34 +157,47 @@ for batch in loader:
             
         pre_react_smiles, pre_react_logs = model_synthon.test_synthon_beam_search(classes, product_batch, product_tree, top_k_trees, top_k_synthon_batch, \
                                                                                   buffer_log_probs, knum=10, product_smiles=test_product_smiles)
-        
     
-    for i, react_smile in enumerate(reacts_smiles):   
-        for j in range(len(pre_react_smiles[i])):
-            pre_smile = pre_react_smiles[i][j]
+    if args.with_target:
+        idx = 0
+        for i, react_smile in enumerate(reacts_smiles):
+            if i in skip_idxs:
+                continue
             
-            if is_sim(pre_smile, react_smile):
-                top_10_bool[num+i, j:] = 1
-                print("%s match (%.2f)" % (product_smiles[i][0], pre_react_logs[i][j]))
-                break
-            else:
-                string = "%s: %s fail to match %s with %s (%.2f)\n" % (product_smiles[i][0], product_smiles[i][1], react_smile, pre_smile, pre_react_logs[i][j])
-                print(string)
-                error_file.write(string)
+            for j in range(len(pre_react_smiles[idx])):
+                pre_smile = pre_react_smiles[idx][j]
+                
+                if is_sim(pre_smile, react_smile):
+                    top_10_bool[num+i, j:] = 1
+                    print("%s match (%.2f)" % (product_smiles[i][0], pre_react_logs[idx][j]))
+                    break
+                else:
+                    string = "%s: %s fail to match %s with %s (%.2f)\n" % (product_smiles[i][0], product_smiles[i][1], react_smile, pre_smile, pre_react_logs[idx][j])
+                    print(string)
+                    error_file.write(string)
+            idx += 1
+            
+        batch_10_acc = np.mean(top_10_bool[num:num+len(product_smiles), :], axis=0)
+        print("iter: top 10 accuracy: %.4f  %.4f  %.4f  %.4f  %.4f  %.4f" % (batch_10_acc[0], batch_10_acc[1], batch_10_acc[2], batch_10_acc[3], batch_10_acc[4], batch_10_acc[-1]))
+    
+        cumu_10_acc = np.mean(top_10_bool[:num+len(product_smiles), :], axis=0)
+        print("iter: top 10 accuracy: %.4f  %.4f  %.4f  %.4f  %.4f  %.4f" % (cumu_10_acc[0], cumu_10_acc[1], cumu_10_acc[2], cumu_10_acc[3], cumu_10_acc[4], cumu_10_acc[-1]))
 
-    for i, react_smile in enumerate(reacts_smiles):   
-        for j in range(len(pre_react_smiles[i])):
-            pre_smile = pre_react_smiles[i][j]
-            pred_file.write("%d %s %s %s %s %.2f\n" % (i + num, product_smiles[i][0], product_smiles[i][1], react_smile, pre_smile, pre_react_logs[i][j]))
-    
-    batch_10_acc = np.mean(top_10_bool[num:num+len(product_smiles), :], axis=0)
-    print("iter: top 10 accuracy: %.4f  %.4f  %.4f  %.4f  %.4f  %.4f" % (batch_10_acc[0], batch_10_acc[1], batch_10_acc[2], batch_10_acc[3], batch_10_acc[4], batch_10_acc[-1]))
-    
-    cumu_10_acc = np.mean(top_10_bool[:num+len(product_smiles), :], axis=0)
-    print("iter: top 10 accuracy: %.4f  %.4f  %.4f  %.4f  %.4f  %.4f" % (cumu_10_acc[0], cumu_10_acc[1], cumu_10_acc[2], cumu_10_acc[3], cumu_10_acc[4], cumu_10_acc[-1]))
-    for i, (idx, prod) in enumerate(product_smiles):
-        string = "%s %s %s\n" % (idx, prod, " ".join([str(top_10_bool[num+i, j]) for j in range(10)]))
-        res_file.write(string)
+        
+        for i, (idx, prod) in enumerate(product_smiles):
+            string = "%s %s %s\n" % (idx, prod, " ".join([str(top_10_bool[num+i, j]) for j in range(10)]))
+            res_file.write(string)
+
+    idx = 0
+    for i, react_smile in enumerate(reacts_smiles):
+        if i in skip_idxs:
+            pred_file.write("%d %s %s --- --- 0.00\n" % (i + num, product_smiles[i][0], product_smiles[i][1]))
+            continue
+        for j in range(len(pre_react_smiles[idx])):
+            pre_smile = pre_react_smiles[idx][j]
+            pred_file.write("%d %s %s %s %s %.2f\n" % (i + num, product_smiles[i][0], product_smiles[i][1], react_smile, pre_smile, pre_react_logs[idx][j]))
+        idx += 1
+        
     num += len(product_smiles)
     sys.stdout.flush()
     error_file.flush()
@@ -189,5 +208,6 @@ res_file.close()
 error_file.close()
 pred_file.close()
 
-top_10_acc = np.sum(top_10_bool, axis=0) / len(loader.prod_list)
-print("top 10 accuracy: %.4f  %.4f  %.4f  %.4f  %.4f  %.4f" % (top_10_acc[0], top_10_acc[1], top_10_acc[2], top_10_acc[3], top_10_acc[4], top_10_acc[-1]))
+if args.with_target:
+    top_10_acc = np.sum(top_10_bool, axis=0) / len(loader.prod_list)
+    print("top 10 accuracy: %.4f  %.4f  %.4f  %.4f  %.4f  %.4f" % (top_10_acc[0], top_10_acc[1], top_10_acc[2], top_10_acc[3], top_10_acc[4], top_10_acc[-1]))

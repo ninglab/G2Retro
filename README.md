@@ -23,7 +23,7 @@ The file 'requirements.txt' provides all the dependent packages used in our pyth
 conda create --name g2retro --file ./requirements.txt
 ```
 
-If you have not installed conda yet, please refer to [conda installation](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) for instructions on conda installation. Please first install the conda, and then use the above command to create a new environment for G2Retro.
+If you have not installed conda yet, please refer to [conda installation](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) for instructions on conda installation. Please first install the conda, and then use the above command to create a new environment for $\mathsf{G^2Retro}$.
 
 
 
@@ -87,7 +87,7 @@ python ./train_center.py --hidden_size 256 --embed_size 32 --depthG 10 --save_di
 
 To use the reaction class information, you can add the <code>--use_class</code> option in the command.
 
-To leverage the brics information, you can add the <code>--use_tree --use_brics</code> option in the command.
+To leverage the BRICS information, you can add the <code>--use_tree --use_brics</code> option in the command.
 
 
 
@@ -131,6 +131,8 @@ The trained models will be saved in the same way as the above.
 
 ## Test
 
+### Test center identification module
+
 To test a trained center identification model with the test set, run
 
 ```
@@ -139,9 +141,11 @@ python ./test_center.py -t <test file> -m <model path> -d <result directory> -o 
 
 <code>st</code> and <code>si</code> specify the starting index and the size of the test data. We set the value of si to be 5007, as the test set 'test.csv' under the 'data' directory contains 5007 reactions in total.
 
+<code>knum</code> specifies the number of reaction centers with the highest likelihood to be selected.
 
 
-For example, you can test our provided trained model under the 'trained_models' directory, with the command below,
+
+For example, you can test our provided trained model under the 'trained_models' directory on reactions in the file 'test.csv' under the directory 'data, with the command below',
 
 ```
 mkdir ../result/center_results/
@@ -150,13 +154,21 @@ python ./test_center.py -t ../data/test.csv -m ../trained_models/center_models/m
 
 
 
+### Test synthon completion module
+
 To test a trained synthon completion model, run
 
 ```
 python ./test_synthon.py -t <test file> -v <vocab path> -m <model path> -d <result directory> -o <result file name> -st 0 -si 5007 --ncpu 10 --hidden_size <hidden_size of the trained model> --embed_size 32 --depthG <depthG of the trained model> --knum 10 --batch_size 32
 ```
 
-For example, you can use the command below to get the synthon completion results,
+The above synthon completion module takes the ground truth synthons as input.
+
+<code>knum</code> specifies the number of reactants with the highest likelihood to be selected for input synthons.
+
+
+
+For example, you can use the command below to get the synthon completion results on reactions in the file 'test.csv' under the directory 'data',
 
 ```
 mkdir ../result/synthon_results/
@@ -165,18 +177,46 @@ python ./test_synthon.py -t ../data/test.csv -v ../data/vocab.txt -m ../trained_
 
 
 
-To test the overall performance, run
+### Test overall performance
+
+To test the overall performance of $\mathsf{G^2Retro}$, run
 
 ```
 python ./test.py -m1 <path for the trained center identification model> -m2 <path for the trained synthon completion model> -st 0 -si 5007 --vocab <vocab file> --save_dir <result directory path> --output <result file name> --test <test data path> --hidden_sizeC 256 --hidden_sizeS 512 --embed_sizeC 32 --embed_sizeS 32 --depthGC 10 --depthGS 5 --batch_size 32 --ncpu 10 --knum 10 
 ```
 
-For example, you can use the command below to get the overall performance results,
+<code>knum</code> specifies the number of reactants with the highest likelihood to be selected for input products.
+
+
+
+For example, you can use the command below to get the overall performance results on reactions in the file 'test.csv' under the directory 'data',
 
 ```
 mkdir ../result/overall_results/
-python ./test.py -m1 ../trained_models/center_models/model_center_optim.pt -m2 ../trained_models/synthon_models/model_synthon_optim.pt -st 0 -si 5007 --vocab ../data//vocab.txt --save_dir ../result/overall_results/ --output test_overall_result --test ../data/test.csv --hidden_sizeC 256 --hidden_sizeS 512 --embed_sizeC 32 --embed_sizeS 32 --depthGC 10 --depthGS 10 --batch_size 32 --ncpu 10 --knum 10
+python ./test.py -m1 ../trained_models/center_models/model_center_optim.pt -m2 ../trained_models/synthon_models/model_synthon_optim.pt -st 0 -si 5007 --vocab ../data/vocab.txt --save_dir ../result/overall_results/ --output test_overall_result --test ../data/test.csv --hidden_sizeC 256 --hidden_sizeS 512 --embed_sizeC 32 --embed_sizeS 32 --depthGC 10 --depthGS 10 --batch_size 32 --ncpu 10 --knum 10
 ```
 
 
 
+### Test with products
+
+All the above test commands require ground truth reactions as input, and output prediction results and top-$k$ accuracies of $\mathsf{G^2Retro}$. In order to facilitate the usage of $\mathsf{G^2Retro}$, we also enable testing $\mathsf{G^2Retro}$  with only products as below,
+
+```
+python ./test.py -m1 <path for the trained center identification model> -m2 <path for the trained synthon completion model> -st 0 -si 2 --vocab <vocab file> --save_dir <result directory path> --output <result file name> --test <test data path> --hidden_sizeC 256 --hidden_sizeS 512 --embed_sizeC 32 --embed_sizeS 32 --depthGC 10 --depthGS 5 --batch_size 32 --ncpu 10 --knum 10 --without_target
+```
+
+
+
+For example, you can use the command below to get the predicted reactants for the product in file 'test_single_sample.txt' under the directory 'data',
+
+```
+mkdir ../result/sample_results/
+python ./test.py -m1 ../trained_models/center_models/model_center_optim.pt -m2 ../trained_models/synthon_models/model_synthon_optim.pt -st 0 -si 1 --vocab ../data/vocab.txt --save_dir ../result/sample_results/ --output test_sample_result --test ../data/test_single_sample.txt --hidden_sizeC 256 --hidden_sizeS 512 --embed_sizeC 32 --embed_sizeS 32 --depthGC 10 --depthGS 10 --batch_size 32 --ncpu 10 --knum 10 --without_target
+```
+
+We strongly encourage users to test $\mathsf{G^2Retro}$ on GPU environment to accelerate the calculation. The file 'test_sample_result_pred.txt' under the directory '../result/sample_results/' will include all the predicted reactants. For example, the top predicted reactants for the sample product are as below.
+
+
+
+![test_single_sample_result](/Users/zichen/Projects/G2Retro/data/test_single_sample_result.png)

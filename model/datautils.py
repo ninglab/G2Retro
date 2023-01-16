@@ -1,15 +1,16 @@
-import pdb
 import numpy as np
 import pandas as pd
 import torch
+from torch.utils.data import Dataset, DataLoader
+from mol_tree import MolTree, update_revise_atoms, identify_revise_edges
 import os, random, re
 import pickle
 from config import device
 from functools import partial
 from multiprocessing import Pool
 from vocab import Vocab
-from torch.utils.data import Dataset, DataLoader
-from mol_tree import MolTree, update_revise_atoms, identify_revise_edges
+from rdkit import Chem
+import time
 from chemutils import get_mol, get_smiles, set_atommap, get_synthon_from_smiles, canonicalize
 
 class PairTreeFolder(object):
@@ -62,14 +63,13 @@ class PairTreeFolder(object):
                     
                     dataset = PairTreeDataset(batches, self.vocab, self.avocab, use_atomic=self.use_atomic, use_class=self.use_class,\
                                           use_brics=self.use_brics, use_feature=self.use_feature, is_train_center=self.is_train_center)
-                    dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=self.num_workers, collate_fn=lambda x:x[0])
-
+                                
+                    dataloader = DataLoader(dataset, batch_size=1, shuffle=False,  num_workers=self.num_workers, collate_fn=lambda x:x[0])
                     
                     for b in dataloader:
                         if not self.shuffle:
                             batches_data.append(b)
-                       
-                         
+                        
                         yield (b, self.epoch)
                         
                         self.step += 1
@@ -89,13 +89,12 @@ class PairTreeFolder(object):
                         if self.step > self.total_step:
                             unfinish = False
                             break
-            
             if self.epoch > self.total_epoch and self.total_epoch > 0: unfinish = False
             self.epoch += 1
             if not unfinish: break
             
 class MolTreeFolder(object):  
-    def __init__(self, data, vocab, avocab, num_workers=10, batch_size=32, use_atomic=False, use_class=False, test=False, del_center=True, use_brics=False, usepair=False, use_feature=True, shuffle=False):
+    def __init__(self, data, vocab, avocab, num_workers=10, batch_size=32, with_target=True, use_atomic=False, use_class=False, test=False, del_center=True, use_brics=False, usepair=False, use_feature=True, shuffle=False):
         self.batch_size = batch_size
         self.vocab = vocab
         self.avocab = avocab
@@ -110,6 +109,8 @@ class MolTreeFolder(object):
         self.use_class = use_class
         self.use_atomic = use_atomic
         self.num_workers = num_workers
+        self.with_target = with_target
+        
         if self.test:
             self.reacts_list = [data[i][3] for i in range(len(data))]
             self.prod_list = [data[i][2] for i in range(len(data))]
@@ -131,9 +132,7 @@ class MolTreeFolder(object):
             
             batches.append(batch)
         
-        dataset = MolTreeDataset(batches, self.vocab, self.avocab, use_atomic=self.use_atomic, use_class=self.use_class, test=self.test, del_center=self.del_center, use_brics=self.use_brics, usepair=self.usepair, use_feature=self.use_feature)
-        
-        dataset.__getitem__(1)
+        dataset = MolTreeDataset(batches, self.vocab, self.avocab, with_target=self.with_target, use_atomic=self.use_atomic, use_class=self.use_class, test=self.test, del_center=self.del_center, use_brics=self.use_brics, usepair=self.usepair, use_feature=self.use_feature)
         
         dataloader = DataLoader(dataset, batch_size=1, num_workers=self.num_workers, shuffle=False, collate_fn=lambda x:x[0])
                 
@@ -205,7 +204,7 @@ class PairTreeDataset(Dataset):
 
 class MolTreeDataset(Dataset):
 
-    def __init__(self, data, vocab, avocab, use_class=False, del_center=True, use_atomic=False, test=False, use_brics=False, usepair=False, use_feature=False):
+    def __init__(self, data, vocab, avocab, with_target=True, use_class=False, del_center=True, use_atomic=False, test=False, use_brics=False, usepair=False, use_feature=False):
         self.data = data
         self.vocab = vocab
         self.avocab = avocab
@@ -216,6 +215,7 @@ class MolTreeDataset(Dataset):
         self.use_feature = use_feature
         self.del_center = del_center
         self.use_atomic = use_atomic
+        self.with_target = with_target
         
     def __len__(self):
         return len(self.data)
@@ -224,44 +224,63 @@ class MolTreeDataset(Dataset):
         all_smiles = self.data[idx]
         product_trees, synthons_trees, react_smiles, target_idxs = [], [], [], []
         reaction_clses, product_smiles, synthon_smiles, skip_idxs = [], [], [], []
+
+        # check whether the product SMILES strings include atom mapping number
+        with_map_num = True
+        if not self.with_target:
+            with_map_num = max([atom.GetAtomMapNum() for atom in Chem.MolFromSmiles(all_smiles[0][2]).GetAtoms()]) > 0
         
         for i, (cls, idx, prod_smile, react_smile) in enumerate(all_smiles):
             product_smiles.append( (idx, prod_smile) )
-            react_smiles.append(react_smile)
 
-            react_mol = get_mol(react_smile)
-            mol, synthon_smile = get_synthon_from_smiles(react_smile)
-            synthon_smiles.append(synthon_smile)
+            # add atom map number
+            if not with_map_num:
+                mol = Chem.MolFromSmiles(prod_smile)
+                for atom in mol.GetAtoms():
+                    atom.SetAtomMapNum(atom.GetIdx())
+                prod_smile = Chem.MolToSmiles(mol)
             
-            if '2H' in react_smiles:
-                skip_idxs.append(i)
-                continue
+            react_smiles.append(react_smile)
             
             try:
                 tree = MolTree(prod_smile, use_brics=self.use_brics)
             except Exception as e:
+                print(e)
                 skip_idxs.append(i)
                 continue
+
+            if self.with_target:
+                react_mol = get_mol(react_smile)
+                mol, synthon_smile = get_synthon_from_smiles(react_smile)
+                synthon_smiles.append(synthon_smile)
             
-            if self.usepair or not self.del_center:
-                react_tree = MolTree(react_smile)
-                synthon_tree = MolTree(synthon_smile)
-            
-                try:
-                    update_revise_atoms(tree, react_tree)
-                except Exception as e:
+                if '2H' in react_smiles:
                     skip_idxs.append(i)
                     continue
-                 
-                synthons_trees.append(synthon_tree)
+
+                if self.usepair or not self.del_center:
+                    react_tree = MolTree(react_smile)
+                    synthon_tree = MolTree(synthon_smile)
+                
+                    try:
+                        update_revise_atoms(tree, react_tree)
+                    except Exception as e:
+                        print(e)
+                        print("%s>>%s" % (react_smile, prod_smile))
+                        skip_idxs.append(i)
+                        continue
+                     
+                    synthons_trees.append(synthon_tree)
+
+                reaction_clses.append(cls)
+
             
             product_trees.append(tree)
-            reaction_clses.append(cls)
         
         
         _, product_batch = MolTree.tensorize(product_trees, self.vocab, self.avocab, istest=self.test, use_atomic=self.use_atomic, use_brics=self.use_brics, product=True, use_feature=self.use_feature)
         
-        if self.del_center:
+        if self.with_target and self.del_center:
             for tree in product_trees:
                 for node in tree.mol_graph.nodes:
                     if 'attach' in tree.mol_graph.nodes[node]:
@@ -274,7 +293,7 @@ class MolTreeDataset(Dataset):
                         del tree.mol_graph[idx1][idx2]['change']
         
         if self.use_class:
-            select_clses = reaction_clses
+            select_clses = reaction_clses #[reaction_clses[i] for i in range(len(reaction_clses)) if i not in skip_idxs]
         else:
             select_clses = None
         
