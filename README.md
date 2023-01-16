@@ -219,4 +219,4 @@ We strongly encourage users to test $\mathsf{G^2Retro}$ on GPU environment to ac
 
 
 
-![test_single_sample_result](/Users/zichen/Projects/G2Retro/data/test_single_sample_result.png)
+![test_single_sample_result](./data/test_single_sample_result.png)
