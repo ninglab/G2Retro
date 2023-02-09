@@ -20,7 +20,14 @@ Operating systems: Red Hat Enterprise Linux (RHEL) 7.7
 The file 'requirements.txt' provides all the dependent packages used in our python environment. You can create a new python environment using conda, to run our model with the command below,
 
 ```
-conda create --name g2retro --file ./requirements.txt
+conda create --name g2retro python=3.7
+conda activate g2retro
+conda install -c conda-forge pandas
+conda install -c anaconda networkx=2.4
+conda install -c "conda-forge/label/cf202003" rdkit
+pip install rdchiral
+pip install scikit-learn==1.0.2
+conda install pytorch==1.9.1 torchvision==0.10.1 torchaudio==0.9.1 cudatoolkit=11.3 -c pytorch -c conda-forge
 ```
 
 If you have not installed conda yet, please refer to [conda installation](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) for instructions on conda installation. Please first install the conda, and then use the above command to create a new environment for $\mathsf{G^2Retro}$.

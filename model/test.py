@@ -110,6 +110,7 @@ try:
     model_synthon.load_state_dict(torch.load(args.mod_syn_path, map_location=torch.device(device)))
 except:
     raise ValueError("model does not exist")
+model_synthon.charge_set = 0
 args.use_brics = tmp1
 args.use_tree = tmp2
 args.with_target = not args.without_target
