@@ -17,7 +17,7 @@ Operating systems: Red Hat Enterprise Linux (RHEL) 7.7
 
 
 
-The file 'requirements.txt' provides all the dependent packages used in our python environment. You can create a new python environment using conda, to run our model with the command below,
+You can create a new python environment using conda, to run our model with the command below,
 
 ```
 conda create --name g2retro python=3.7
