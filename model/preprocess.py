@@ -203,7 +203,7 @@ if __name__ == "__main__":
     if args.use_class:
         selected_mol_trees = [(mol_trees[i][0], mol_trees[i][1][0]) for i in range(len(mol_trees)) if i not in removed_idxs]
     else:
-        selected_mol_trees = [mol_trees[i][0] for i in range(len(mol_trees)) if i not in removed_idxs]
+        selected_mol_trees = [(mol_trees[i][0], None) for i in range(len(mol_trees)) if i not in removed_idxs]
     
     with open("%s/%s.pkl" % (path, args.output), 'wb') as f:
         pickle.dump(selected_mol_trees, f, pickle.HIGHEST_PROTOCOL)

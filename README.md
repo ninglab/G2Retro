@@ -50,7 +50,7 @@ To process your own training dataset, run
 
 ```
 cd model
-python ./preprocess.py --train <your dataset path> --path <your processed data path> --output <the name of output processed dataset> --ncpus 10
+python ./preprocess.py --train <your dataset path> --path <your processed data path> --output <the name of output processed dataset> --ncpu 10
 ```
 
 The above program will be run in parallel. Please specify the number of processes (i.e., the value of ncpus) according to the cores of CPUs on your machine.
@@ -60,7 +60,7 @@ The above program will be run in parallel. Please specify the number of processe
 For example, with the provided training dataset under 'data' directory, you can use the command below to process the dataset,
 
 ```
-python ./preprocess.py --train ../data/train.csv --path ../data/ --output tensors --ncpus 10
+python ./preprocess.py --train ../data/train.csv --path ../data/ --output tensors --ncpu 10
 ```
 
 The processed dataset 'tensors.pkl' for the dataset '../data/train.csv' will be saved under the provided path '../data/'.

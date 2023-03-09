@@ -53,8 +53,6 @@ class PairTreeFolder(object):
                     with open(self.path + path, 'rb') as f:
                         mol_trees = pickle.load(f)
                         
-                        mol_trees = [(mol_tree, None) for mol_tree in mol_trees]
-                        
                 if self.shuffle or (not self.shuffle and i == 0):
                     batches = [mol_trees[j : j + self.batch_size] for j in range(0, len(mol_trees), self.batch_size)]
                     
@@ -237,7 +235,7 @@ class MolTreeDataset(Dataset):
             if not with_map_num:
                 mol = Chem.MolFromSmiles(prod_smile)
                 for atom in mol.GetAtoms():
-                    atom.SetAtomMapNum(atom.GetIdx())
+                    atom.SetAtomMapNum(atom.GetIdx()+1)
                 prod_smile = Chem.MolToSmiles(mol)
             
             react_smiles.append(react_smile)

@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_atomic', action="store_false", help='whether to use atomic number as feature (default value is True)')
     parser.add_argument('--use_node_embed', action="store_true", help='whether to use the substructure embedding in the prediction functions (default value is False)')
     parser.add_argument('--use_brics', action="store_true", help='whether to use brics substructures in the encoder (default value is False)')    
-    parser.add_argument('--use_feature', action='store_false', help='whether to )
+    parser.add_argument('--use_feature', action='store_false', help='whether to use the atom features or not')
     parser.add_argument('--use_class', action='store_true', help='whether the reaction types are known')
     parser.add_argument('--update_embed', action='store_true')
     parser.add_argument('--shuffle', action='store_false')

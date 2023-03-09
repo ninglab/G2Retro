@@ -256,6 +256,8 @@ class MolCenter(nn.Module):
     def get_center_hiddens(self, cand_bond_idxs, cand_bond_types, cand_bond_embeds):
         """
         """
+        if len(cand_bond_idxs) == len(cand_bond_types) == 0: return None
+        
         cand_bond_idxs = create_pad_tensor(cand_bond_idxs).to(device)
         cand_bond_types = create_pad_tensor(cand_bond_types).to(device)
         
