@@ -1,5 +1,7 @@
 # $\mathsf{G^2Retro}$: Two-Step Graph Generative Models for Retrosynthesis Prediction
 
+[![DOI](https://zenodo.org/badge/498916335.svg)](https://zenodo.org/badge/latestdoi/498916335)
+
 This is the implementation of our $\mathsf{G^2Retro}$ and  $\mathsf{G^2Retro}\text{-}\mathsf{B}$ model: https://arxiv.org/abs/2206.04882. 
 
 
