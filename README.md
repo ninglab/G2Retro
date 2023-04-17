@@ -166,7 +166,7 @@ python ./test_center.py -t ../data/test.csv -m ../trained_models/center_models/m
 To test a trained synthon completion model, run
 
 ```
-python ./test_synthon.py -t <test file> -v <vocab path> -m <model path> -d <result directory> -o <result file name> -st 0 -si 5007 --ncpu 10 --hidden_size <hidden_size of the trained model> --embed_size 32 --depthG <depthG of the trained model> --knum 10 --batch_size 32
+python ./test_synthon.py -t <test file> -m <model path> -d <result directory> -o <result file name> -st 0 -si 5007 --ncpu 10 --hidden_size <hidden_size of the trained model> --embed_size 32 --depthG <depthG of the trained model> --knum 10 --batch_size 32
 ```
 
 The above synthon completion module takes the ground truth synthons as input.
@@ -179,7 +179,7 @@ For example, you can use the command below to get the synthon completion results
 
 ```
 mkdir ../result/synthon_results/
-python ./test_synthon.py -t ../data/test.csv -v ../data/vocab.txt -m ../trained_models/model_synthon_optim.pt -d ../result/synthon_results/ -o test_synthon_result -st -0 -si 5007 --ncpu 10 --hidden_size 512 --embed_size 32 --depthG 10 --knum 10 --batch_size 32
+python ./test_synthon.py -t ../data/test.csv -m ../trained_models/synthon_models/model_synthon_optim.pt -d ../result/synthon_results/ -o test_synthon_result -st -0 -si 5007 --ncpu 10 --hidden_size 512 --embed_size 32 --depthG 10 --knum 10 --batch_size 32
 ```
 
 

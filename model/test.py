@@ -126,7 +126,7 @@ with open(args.test_path) as f:
             smiles = s[2].split(">>")
             data.append((int(s[0]), s[1], smiles[1], smiles[0]))
         else:
-            data.append((0, s[1], s[0], ''))
+            data.append((0, '', s[0], ''))
 
 output = []
 start = int(args.start)
@@ -160,7 +160,7 @@ for batch in loader:
         
         pre_react_smiles, pre_react_logs = model_synthon.test_synthon_beam_search(classes, product_batch, product_tree, top_k_trees, top_k_synthon_batch, \
                                                                                   buffer_log_probs, knum=10, product_smiles=test_product_smiles)
-    pdb.set_trace()
+    
     if args.with_target:
         idx = 0
         for i, react_smile in enumerate(reacts_smiles):

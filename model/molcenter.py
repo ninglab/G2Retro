@@ -161,9 +161,10 @@ class MolCenter(nn.Module):
         Args:
             tensors: input embeddings
         """
-        tensors[0][0][:, 2] = tensors[0][0][:, 2] + int((self.charge_num - 1 ) / 2)
+        tensors[0][0][:, 2] = tensors[0][0][:, 2] + self.charge_offset
         mol_rev_vecs, mol_atom_vecs, mol_mess_vecs = self.encoder(tensors, product=product, classes=classes, use_feature=use_feature, usemask=usemask)
         
+        tensors[0][0][:, 2] = tensors[0][0][:, 2] - self.charge_offset
         return mol_rev_vecs, mol_atom_vecs, mol_mess_vecs
     
     def fuse_noise(self, tree_vecs, mol_vecs):

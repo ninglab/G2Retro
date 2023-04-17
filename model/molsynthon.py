@@ -62,6 +62,8 @@ class MolSynthon(nn.Module):
             self.E_fr = torch.eye( IS_RING_NUM ).to(device)
             self.E_fc = torch.eye( IS_CONJU_NUM ).to(device)
             self.E_fa = torch.eye( IS_AROMATIC_NUM ).to(device)
+        else:
+            self.charge_offset = 0
             
         self.E_b = torch.eye(BOND_SIZE).to(device)
        
