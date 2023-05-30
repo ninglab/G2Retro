@@ -4,6 +4,7 @@
 
 This is the implementation of our $\mathsf{G^2Retro}$ and  $\mathsf{G^2Retro}\text{-}\mathsf{B}$ model: https://arxiv.org/abs/2206.04882. 
 
+This paper has been accepted by Communications Chemistry ([link](https://www.nature.com/articles/s42004-023-00897-3)) with DOI https://doi.org/10.1038/s42004-023-00897-3.
 
 
 ## Requirements and Installation
@@ -229,3 +230,18 @@ We strongly encourage users to test $\mathsf{G^2Retro}$ on GPU environment to ac
 
 
 ![test_single_sample_result](./data/test_single_sample_result.png)
+
+### Citation
+
+```
+@article{Chen2023,
+	author = {Chen, Ziqi and Ayinde, Oluwatosin R. and Fuchs, James R. and Sun, Huan and Ning, Xia},
+	doi = {10.1038/s42004-023-00897-3},
+	journal = {Communications Chemistry},
+	number = {1},
+	pages = {102},
+	title = {G2Retro as a two-step graph generative models for retrosynthesis prediction},
+	volume = {6},
+	year = {2023},
+}
+```
