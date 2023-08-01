@@ -329,7 +329,7 @@ class MolCenter(nn.Module):
                                 cand_change_bond_idxs.append(cand_bonds_offset + j)
                                 num += 1
                         
-                        cand_change_center_bond_idxs.extend( [bond_idx] * num )
+                        cand_change_center_bond_idxs.extend( [cand_bonds_offset + bond_idx] * num )
                         cand_change_bond_size += num
                         
                         if change_order[0] is None:
